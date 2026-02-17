@@ -420,6 +420,27 @@ doneDrawing:;
         if (goods.fuelFor.Length > 0) {
             if (goods.fuelValue > 0f) {
                 BuildSubHeader(gui, LSs.FuelValueCanBeUsed.L(DataUtils.FormatAmount(goods.fuelValue, UnitOfMeasure.Megajoule)));
+
+                float costAll = goods.Cost(false);
+                if (!float.IsPositiveInfinity(costAll)) {
+                    float costPerMj = costAll / goods.fuelValue;
+                    float costNow = goods.Cost(true);
+                    string costPerMjText;
+
+                    if (!float.IsPositiveInfinity(costNow) && costNow > costAll) {
+                        float costPerMjNow = costNow / goods.fuelValue;
+                        costPerMjText = LSs.FuelCostPerMjWithCurrent.L(
+                            DataUtils.FormatAmount(costPerMj, UnitOfMeasure.None),
+                            DataUtils.FormatAmount(costPerMjNow, UnitOfMeasure.None));
+                    }
+                    else {
+                        costPerMjText = LSs.FuelCostPerMj.L(DataUtils.FormatAmount(costPerMj, UnitOfMeasure.None));
+                    }
+
+                    using (gui.EnterGroup(contentPadding)) {
+                        gui.BuildText(costPerMjText);
+                    }
+                }
             }
             else {
                 BuildSubHeader(gui, LSs.FuelValueZeroCanBeUsed);
@@ -522,6 +543,29 @@ doneDrawing:;
             }
             if (breakdown.MiningPenalty > 1f) {
                 gui.BuildText(LSs.RecipeLogisticsMiningPenalty.L(DataUtils.FormatAmount(breakdown.MiningPenalty, UnitOfMeasure.None)));
+            }
+
+            // Net fuel energy
+            float energyIn = 0f;
+            float energyOut = 0f;
+            foreach (var ingredient in recipe.ingredients) {
+                if (ingredient.goods.fuelValue > 0f) {
+                    energyIn += ingredient.amount * ingredient.goods.fuelValue;
+                }
+            }
+            foreach (var product in recipe.products) {
+                if (product.goods.fuelValue > 0f) {
+                    energyOut += product.amount * product.goods.fuelValue;
+                }
+            }
+            float netEnergy = energyOut - energyIn;
+            if (netEnergy > 0f) {
+                gui.AllocateSpacing(0.5f);
+                gui.BuildText(LSs.RecipeFuelEnergyGained.L(DataUtils.FormatAmount(netEnergy, UnitOfMeasure.Megajoule)));
+            }
+            else if (netEnergy < 0f) {
+                gui.AllocateSpacing(0.5f);
+                gui.BuildText(LSs.RecipeFuelEnergySpent.L(DataUtils.FormatAmount(-netEnergy, UnitOfMeasure.Megajoule)));
             }
         }
     }
